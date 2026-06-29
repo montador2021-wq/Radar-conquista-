@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "Sale": {
+      "title": "Sale",
+      "description": "A sale / order made in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "numeroPedido": { "type": "string" },
+        "vendedorId": { "type": "string" },
+        "clienteId": { "type": "string" },
+        "valorProduto": { "type": "number" },
+        "valorAssistencia": { "type": "number" },
+        "valorImpermeabilizacao": { "type": "number" },
+        "total": { "type": "number" },
+        "data": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "bonusTotal": { "type": "number" },
+        "comissaoProduto": { "type": "number" },
+        "servicosExtras": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["ativo", "cancelado"] }
+      }
+    },
+    "AccessLog": {
+      "title": "AccessLog",
+      "description": "Log of accesses by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "number" }
+      }
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "System or target configurations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product": { "type": "number" },
+        "assistance": { "type": "number" },
+        "waterproofing": { "type": "number" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "A user / salesperson in the CRM",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "A customer in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "email": { "type": "string" },
+        "telefone": { "type": "string" },
+        "cpf": { "type": "string" },
+        "endereco": { "type": "string" },
+        "dataCadastro": { "type": "string" },
+        "totalComprado": { "type": "number" },
+        "pedidosCount": { "type": "number" },
+        "interesse": { "type": "string" },
+        "dataRetorno": { "type": "string" },
+        "statusRetorno": { "type": "string" }
+      }
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "An opportunity / deal in the CRM pipeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "value": { "type": "number" },
+        "daysAgo": { "type": "number" },
+        "stage": { "type": "string" },
+        "vendedorId": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "List of sales"
+    },
+    "/access_logs/{logId}": {
+      "schema": "AccessLog",
+      "description": "Access logs"
+    },
+    "/settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "System/targets settings"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Users / salespeople"
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customers"
+    },
+    "/opportunities/{oppId}": {
+      "schema": "Opportunity",
+      "description": "CRM opportunities"
+    }
+  }
+}
