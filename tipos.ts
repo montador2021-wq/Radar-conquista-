@@ -62,6 +62,7 @@ export interface Targets {
     ativo: boolean;
     valor: number;
   };
+  menuOculto?: Record<string, boolean>;
 }
 
 /**

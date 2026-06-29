@@ -94,7 +94,8 @@ const DEFAULT_TARGETS: Targets = {
     ativo: false,
     dataInicio: '',
     dataFim: ''
-  }
+  },
+  menuOculto: {}
 };
 
 const App: React.FC = () => {
@@ -449,7 +450,8 @@ const App: React.FC = () => {
             premiacaoExtra: { ...DEFAULT_TARGETS.premiacaoExtra, ...(targetsData.premiacaoExtra || {}) },
             serviceBonuses: { ...DEFAULT_TARGETS.serviceBonuses, ...(targetsData.serviceBonuses || {}) },
             levels: { ...DEFAULT_TARGETS.levels, ...(targetsData.levels || {}) },
-            bonusPorPedido: { ...DEFAULT_TARGETS.bonusPorPedido, ...(targetsData.bonusPorPedido || { ativo: false, valor: 5 }) }
+            bonusPorPedido: { ...DEFAULT_TARGETS.bonusPorPedido, ...(targetsData.bonusPorPedido || { ativo: false, valor: 5 }) },
+            menuOculto: { ...DEFAULT_TARGETS.menuOculto, ...(targetsData.menuOculto || {}) }
           };
           setTargets(mergedTargets);
           localStorage.setItem(TARGETS_KEY, JSON.stringify(mergedTargets));
@@ -921,7 +923,7 @@ const App: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.3em] text-center">Menu Principal</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {NAVIGATION_ITEMS.filter(item => item.id !== NavItem.Resumos).map((item) => (
+                {NAVIGATION_ITEMS.filter(item => item.id !== NavItem.Resumos && !targets.menuOculto?.[item.id]).map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setActiveNav(item.id)}
@@ -1040,9 +1042,9 @@ const App: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
-                  { label: 'Venda de Produtos (Meta)', current: stats.pPerc, color: 'bg-purple-600' },
-                  { label: 'Assistência', current: stats.aPerc, color: 'bg-emerald-500' },
-                  { label: 'Impermeab.', current: stats.iPerc, color: 'bg-indigo-500' },
+                  { id: 'product', label: 'Venda de Produtos (Meta)', current: stats.pPerc, color: 'bg-purple-600' },
+                  { id: 'assistance', label: 'Assistência', current: stats.aPerc, color: 'bg-emerald-500' },
+                  { id: 'waterproofing', label: 'Impermeab.', current: stats.iPerc, color: 'bg-indigo-500' },
                 ].map((cat) => (
                   <div key={cat.label} className="space-y-3">
                     <div className="flex justify-between text-[10px] font-black uppercase">
@@ -1332,9 +1334,9 @@ const App: React.FC = () => {
 
     if (activeNav === NavItem.Meta) {
       const data = [
-        { name: 'Produtos', value: stats.pTotal, target: targets.product, fill: '#9333ea' },
-        { name: 'Assistência', value: stats.aTotal, target: targets.assistance, fill: '#10b981' },
-        { name: 'Impermeab.', value: stats.iTotal, target: targets.waterproofing, fill: '#6366f1' },
+        { id: 'product', name: 'Produtos', value: stats.pTotal, target: targets.product, fill: '#9333ea' },
+        { id: 'assistance', name: 'Assistência', value: stats.aTotal, target: targets.assistance, fill: '#10b981' },
+        { id: 'waterproofing', name: 'Impermeab.', value: stats.iTotal, target: targets.waterproofing, fill: '#6366f1' },
       ];
 
       return (
@@ -2013,9 +2015,9 @@ const App: React.FC = () => {
            </div>
            <div className="space-y-6">
               {[
-                { label: 'Venda Geral', current: stats.pPerc, color: 'bg-purple-600' },
-                { label: 'Assistência', current: stats.aPerc, color: 'bg-emerald-500' },
-                { label: 'Impermeab.', current: stats.iPerc, color: 'bg-indigo-500' },
+                { id: 'product', label: 'Venda Geral', current: stats.pPerc, color: 'bg-purple-600' },
+                { id: 'assistance', label: 'Assistência', current: stats.aPerc, color: 'bg-emerald-500' },
+                { id: 'waterproofing', label: 'Impermeab.', current: stats.iPerc, color: 'bg-indigo-500' },
               ].map((cat) => (
                 <div key={cat.label} className="space-y-2">
                    <div className="flex justify-between text-[10px] font-black uppercase">

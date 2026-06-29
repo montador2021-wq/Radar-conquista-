@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Targets } from '../tipos';
+import { Targets, NavItem } from '../tipos';
 import { User } from '../src/types';
 import { supabase } from '../src/supabase';
 import { 
@@ -18,7 +18,8 @@ import {
   Check, 
   ShieldAlert, 
   UserPlus,
-  Sparkles
+  Sparkles,
+  EyeOff
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isMechanicalMuted, setMechanicalMuted } from '../src/mechanicalTouch';
@@ -337,6 +338,53 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ocultar Opções do Menu Principal */}
+        <div className="bg-white p-6 rounded-[2rem] border border-gray-200 space-y-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <EyeOff className="text-purple-600" size={18} />
+            <h3 className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Ocultar Opções do Menu Principal</h3>
+          </div>
+
+          <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
+            Selecione quais botões de atalho você deseja ocultar do Menu Principal da página inicial. Os recursos continuarão funcionando normalmente, apenas não aparecerão na tela de início.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { id: NavItem.Relatorios, label: 'Relatórios', desc: 'Ocultar atalho de relatórios' },
+              { id: NavItem.Meta, label: 'Metas', desc: 'Ocultar atalho de metas' },
+              { id: NavItem.ResumoServico, label: 'Serviços', desc: 'Ocultar atalho de serviços' },
+              { id: NavItem.ResumoPedido, label: 'Pedidos', desc: 'Ocultar atalho de pedidos' },
+              { id: NavItem.AdicionarVenda, label: 'Lançar', desc: 'Ocultar atalho de lançar venda' },
+              { id: NavItem.Configuracoes, label: 'Ajustes', desc: 'Ocultar atalho de ajustes' },
+              { id: NavItem.Clientes, label: 'Clientes', desc: 'Ocultar atalho de clientes' },
+              { id: NavItem.Processos, label: 'Fluxo', desc: 'Ocultar atalho de fluxo (CRM)' },
+            ].map((option) => (
+              <label key={option.id} className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl cursor-pointer hover:bg-gray-100/50 transition-all">
+                <input
+                  type="checkbox"
+                  checked={tempTargets.menuOculto?.[option.id] ?? false}
+                  onChange={(e) => {
+                    const mo = tempTargets.menuOculto || {};
+                    setTempTargets({
+                      ...tempTargets,
+                      menuOculto: {
+                        ...mo,
+                        [option.id]: e.target.checked
+                      }
+                    });
+                  }}
+                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-gray-800">{option.label}</span>
+                  <span className="text-[9px] text-gray-400 font-medium">{option.desc}</span>
+                </div>
+              </label>
             ))}
           </div>
         </div>

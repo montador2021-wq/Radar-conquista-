@@ -38,8 +38,20 @@ export interface FirestoreErrorInfo {
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const auth = getAuth();
+  let errorMessage = '';
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  } else if (error && typeof error === 'object') {
+    try {
+      errorMessage = (error as any).message || (error as any).code || JSON.stringify(error);
+    } catch (e) {
+      errorMessage = String(error);
+    }
+  } else {
+    errorMessage = String(error);
+  }
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,

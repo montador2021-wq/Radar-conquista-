@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Beautiful modern gradient shadow and branding colors -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#7e22ce" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Solid Circle Background with Gradient -->
+  <circle cx="256" cy="256" r="230" fill="url(#bgGrad)" />
+
+  <!-- Shield and Checkmark Group with Drop Shadow for depth -->
+  <g filter="url(#shadow)">
+    <!-- Shield Outline -->
+    <path 
+      d="M 256,140 C 310,140 345,160 345,220 C 345,295 295,355 256,385 C 217,355 167,295 167,220 C 167,160 202,140 256,140 Z" 
+      fill="none" 
+      stroke="#ffffff" 
+      stroke-width="20" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+    />
+    <!-- Checkmark -->
+    <path 
+      d="M 220,255 L 245,280 L 295,225" 
+      fill="none" 
+      stroke="#ffffff" 
+      stroke-width="22" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+    />
+  </g>
+</svg>
