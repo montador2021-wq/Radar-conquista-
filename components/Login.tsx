@@ -16,7 +16,16 @@ import {
   ChevronRight, 
   CheckCircle2,
   Mail,
-  Store
+  Store,
+  FileText,
+  Phone,
+  Award,
+  Users,
+  ArrowUpRight,
+  BarChart3,
+  CheckSquare,
+  Settings2,
+  Play
 } from 'lucide-react';
 import { auth } from '../src/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -26,6 +35,24 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  // Mode: 'landing' (presentation website) | 'app' (auth & saas screens)
+  const [viewMode, setViewMode] = useState<'landing' | 'app'>('landing');
+
+  // Interactive Simulator States
+  const [simProductValue, setSimProductValue] = useState<number>(1499.90);
+  const [simShippingFree, setSimShippingFree] = useState<boolean>(true);
+  const [simShippingFee, setSimShippingFee] = useState<number>(49.90);
+  const [simAssemblyFree, setSimAssemblyFree] = useState<boolean>(true);
+  const [simAssemblyFee, setSimAssemblyFee] = useState<number>(75.00);
+  const [simValidityDays, setSimValidityDays] = useState<number>(5);
+
+  const calculatedTotal = () => {
+    let total = simProductValue;
+    if (!simShippingFree) total += simShippingFee;
+    if (!simAssemblyFree) total += simAssemblyFee;
+    return total;
+  };
+
   // Tabs: 'login' | 'register'
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   
@@ -42,57 +69,74 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [firstStoreName, setFirstStoreName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<'pequeno' | 'medio' | 'empresarial'>('pequeno');
+  const [selectedPlan, setSelectedPlan] = useState<'solo' | 'pequeno' | 'medio' | 'empresarial'>('pequeno');
   const [pixKeyCopied, setPixKeyCopied] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const plans = [
     {
-      id: 'pequeno' as const,
-      name: 'Plano Pequeno',
-      price: 'R$ 49',
+      id: 'solo' as const,
+      name: 'Consultor Solo',
+      price: 'R$ 10,00',
       period: '/mês',
       features: [
-        '1 loja física ou virtual',
-        'Até 3 vendedores ativos',
-        'Painel básico de metas',
-        'Registro de clientes e leads',
-        'Suporte por e-mail'
+        'Apenas 1 usuário ativo',
+        'Controle de orçamento completo',
+        'Configuração de frete e montagem',
+        'Gerador de PDF de alta fidelidade',
+        'Validade de orçamento customizada',
+        'Acesso individual ao painel'
       ],
-      tag: 'Ideal para Autônomos',
+      tag: 'Plano Individual',
       color: 'border-gray-200 hover:border-purple-300'
     },
     {
-      id: 'medio' as const,
-      name: 'Plano Médio',
-      price: 'R$ 199',
+      id: 'pequeno' as const,
+      name: 'Equipe Bronze',
+      price: 'R$ 49,90',
       period: '/mês',
       features: [
-        'Até 5 lojas integradas',
-        'Até 20 vendedores ativos',
-        'Painel gerencial avançado',
-        'Acelerador de metas inteligente',
-        'Hierarquia automática',
-        'Suporte prioritário via WhatsApp'
+        'Até 10 vendedores ativos',
+        'Painel gerencial integrado',
+        'Acelerador de metas e bônus',
+        'Registro de clientes e orçamentos',
+        'Validade do orçamento dinâmica',
+        'Suporte por e-mail'
       ],
-      tag: 'Mais Vendido ⭐',
+      tag: 'Até 10 Vendedores ⭐',
       color: 'border-purple-500 ring-2 ring-purple-500/20 shadow-purple-500/5'
     },
     {
-      id: 'empresarial' as const,
-      name: 'Plano Empresarial',
-      price: 'R$ 499',
+      id: 'medio' as const,
+      name: 'Equipe Prata',
+      price: 'R$ 199,00',
       period: '/mês',
       features: [
-        'Lojas físicas ilimitadas',
-        'Vendedores e gerentes ilimitados',
-        'Inteligência comercial avançada',
-        'Relatórios customizados de perdas',
-        'Integração multiempresa completa',
-        'Gerente de contas dedicado'
+        'Até 40 pessoas ativas',
+        'Controle total de equipe (supervisor/gerente)',
+        'Ocultação de categorias personalizada',
+        'Comissões dinâmicas por níveis',
+        'Histórico e transferência de clientes',
+        'Suporte prioritário via WhatsApp'
       ],
-      tag: 'Para Grandes Redes',
+      tag: 'Até 40 Vendedores',
+      color: 'border-gray-200 hover:border-purple-300'
+    },
+    {
+      id: 'empresarial' as const,
+      name: 'Corporativo Ouro',
+      price: 'R$ 499,00',
+      period: '/mês',
+      features: [
+        'Vendedores e gerentes ilimitados',
+        'Controle de múltiplas filiais',
+        'Painel gerencial master',
+        'Relatórios customizados e exportáveis',
+        'Hierarquia automática total',
+        'Gerente de contas dedicado 24/7'
+      ],
+      tag: 'Usuários Ilimitados',
       color: 'border-gray-200 hover:border-purple-300'
     }
   ];
@@ -291,7 +335,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const supervisorId = `user-${Math.random().toString(36).substring(2, 11)}`;
       const randomToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
-      const price = selectedPlan === 'pequeno' ? 49 : selectedPlan === 'medio' ? 199 : 499;
+      const price = selectedPlan === 'solo' ? 10 : selectedPlan === 'pequeno' ? 49.90 : selectedPlan === 'medio' ? 199 : 499;
 
       // 2. Insert Company (Tenant)
       const newTenant = {
@@ -374,6 +418,471 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
+  if (viewMode === 'landing') {
+    return (
+      <div className="min-h-screen bg-[#070609] text-slate-100 font-sans selection:bg-purple-600 selection:text-white overflow-x-hidden pb-16">
+        {/* HEADER */}
+        <header className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between border-b border-white/5 relative z-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-600/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-purple-500/20 shadow-lg shadow-purple-500/5">
+              <ShieldCheck size={22} className="text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-md font-black tracking-tight uppercase leading-none text-white">Conquista</h2>
+              <span className="text-[8px] font-bold text-purple-400 uppercase tracking-widest block mt-0.5">Plataforma Comercial</span>
+            </div>
+          </div>
+          
+          <nav className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-wider text-slate-400">
+            <a href="#recursos" className="hover:text-purple-400 transition-colors">Recursos</a>
+            <a href="#simulador" className="hover:text-purple-400 transition-colors">Simulador</a>
+            <a href="#planos" className="hover:text-purple-400 transition-colors">Planos</a>
+          </nav>
+
+          <button
+            onClick={() => {
+              setActiveTab('login');
+              setViewMode('app');
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-600/10 hover:shadow-purple-600/20 active:scale-95 cursor-pointer"
+          >
+            Acessar Sistema
+          </button>
+        </header>
+
+        {/* HERO SECTION */}
+        <section className="max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full filter blur-[100px] -z-10 pointer-events-none" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-600/10 rounded-full filter blur-[100px] -z-10 pointer-events-none" />
+
+          <div className="lg:col-span-7 space-y-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-wider">
+              <Sparkles size={12} className="text-yellow-400" />
+              Gestão de Alta Performance para Lojas de Móveis
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter uppercase italic leading-[0.95] text-white">
+              Eleve suas vendas ao <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">próximo nível</span>
+            </h1>
+            <p className="text-slate-400 text-sm md:text-base max-w-xl leading-relaxed font-medium">
+              A plataforma comercial definitiva que otimiza sua logística e acelera metas. Simule fretes e montagens de móveis com flexibilidade, defina validade de orçamentos e gere PDFs corporativos profissionais prontos para enviar por WhatsApp sem encher a memória do aparelho.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <button
+                onClick={() => {
+                  setActiveTab('login');
+                  setViewMode('app');
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest px-8 py-4 rounded-xl transition-all shadow-xl shadow-purple-600/15 flex items-center justify-center gap-2 hover:gap-3 active:scale-95 cursor-pointer"
+              >
+                Acessar Plataforma
+                <ArrowRight size={16} />
+              </button>
+              <a
+                href="#simulador"
+                className="bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest px-8 py-4 rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2 text-center"
+              >
+                Testar Simulador
+              </a>
+            </div>
+          </div>
+
+          {/* HERO VISUAL MOCKUP */}
+          <div className="lg:col-span-5 bg-gradient-to-b from-slate-800/80 to-slate-900/80 rounded-3xl border border-white/5 p-6 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full filter blur-2xl pointer-events-none" />
+            
+            {/* Mockup Header */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+              <div className="flex gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
+              </div>
+              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">RadarConquista - Dashboard</span>
+            </div>
+
+            {/* Mockup Body (Stats & visual cards) */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
+                  <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Meta Mensal</span>
+                  <div className="text-lg font-black text-white mt-1">R$ 50.000</div>
+                  <div className="w-full bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-purple-500 h-full rounded-full" style={{ width: '74%' }} />
+                  </div>
+                  <div className="text-[8px] text-purple-400 font-bold mt-1 uppercase text-right">74% Concluído</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
+                  <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Sua Comissão</span>
+                  <div className="text-lg font-black text-emerald-400 mt-1">R$ 1.340,50</div>
+                  <div className="text-[8px] text-emerald-500/80 font-bold mt-1.5 uppercase flex items-center gap-1">
+                    <Sparkles size={10} /> +0.6% Nível Bônus
+                  </div>
+                </div>
+              </div>
+
+              {/* PDF & Logistcs preview */}
+              <div className="bg-purple-900/10 border border-purple-500/10 p-3.5 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText size={14} className="text-purple-400" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-wider">Último Orçamento</span>
+                  </div>
+                  <span className="text-[8px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full uppercase tracking-widest">Aguardando</span>
+                </div>
+                <hr className="border-white/5" />
+                <div className="flex justify-between text-[10px] text-slate-300">
+                  <span>Guarda-Roupa Casal</span>
+                  <span className="font-bold text-white">R$ 1.499,90</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 pt-1">
+                  <div className="bg-white/5 p-1 rounded text-center text-[8px] text-slate-400 font-bold">
+                    Frete: <span className="text-emerald-400">Grátis</span>
+                  </div>
+                  <div className="bg-white/5 p-1 rounded text-center text-[8px] text-slate-400 font-bold">
+                    Montagem: <span className="text-white">R$ 50</span>
+                  </div>
+                  <div className="bg-white/5 p-1 rounded text-center text-[8px] text-slate-400 font-bold">
+                    Validade: <span className="text-white">5 dias</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FEATURES GRID SECTION */}
+        <section id="recursos" className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 relative">
+          <div className="text-center max-w-2xl mx-auto space-y-4 mb-16">
+            <span className="text-purple-400 text-[10px] font-black uppercase tracking-[0.3em]">Por que o Conquista App?</span>
+            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tight">
+              Recursos construídos para <span className="text-purple-400">vender mais</span>
+            </h2>
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Especialmente desenvolvido para o varejo de móveis e eletro</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Feature 1 */}
+            <div className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:border-purple-500/20 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
+                <BarChart3 size={24} />
+              </div>
+              <h3 className="text-md font-black uppercase tracking-tight text-white mb-2">Metas Aceleradoras</h3>
+              <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                Comissões progressivas divididas em níveis dinâmicos para desafiar e premiar os vendedores conforme batem 100%, 120% ou 140% das metas de produtos e serviços.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:border-purple-500/20 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
+                <Settings2 size={24} />
+              </div>
+              <h3 className="text-md font-black uppercase tracking-tight text-white mb-2">Logística Flexível</h3>
+              <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                Controle total e instantâneo sobre as regras de orçamento: selecione frete e montagem grátis ou cobre valores específicos com campos dinâmicos integrados.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:border-purple-500/20 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
+                <FileText size={24} />
+              </div>
+              <h3 className="text-md font-black uppercase tracking-tight text-white mb-2">PDF de Alta Fidelidade</h3>
+              <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                Propostas em formato profissional com logotipo corporativo Sono Show Móveis, paginação inteligente de margem de segurança e rodapé personalizado.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:border-purple-500/20 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
+                <Users size={24} />
+              </div>
+              <h3 className="text-md font-black uppercase tracking-tight text-white mb-2">Controle Gerencial</h3>
+              <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                Permissões inteligentes baseadas em cargos (Supervisor, Gerente, Vendedor) com painel para gerenciar a equipe e ocultar categorias específicas de produtos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* INTERACTIVE SIMULATOR SECTION */}
+        <section id="simulador" className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left Column (Info & Controls) */}
+            <div className="lg:col-span-6 space-y-6 text-left">
+              <span className="text-purple-400 text-[10px] font-black uppercase tracking-[0.3em]">Demonstração Interativa</span>
+              <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tight">
+                Simule orçamentos de <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">forma simples</span>
+              </h2>
+              <p className="text-slate-400 text-xs font-medium uppercase tracking-wider leading-relaxed">
+                Mexa nos botões abaixo para ver como as novas opções de frete, montagem e validade alteram as condições comerciais do orçamento instantaneamente na tela.
+              </p>
+
+              <hr className="border-white/5" />
+
+              {/* SIMULATOR CONTROLS */}
+              <div className="space-y-4">
+                {/* Product value */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Valor do Produto (R$)</label>
+                  <input
+                    type="number"
+                    value={simProductValue}
+                    onChange={(e) => setSimProductValue(Number(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none text-white font-bold focus:border-purple-500 transition-colors"
+                  />
+                </div>
+
+                {/* Shipping Control */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Entrega / Frete</span>
+                    <div className="flex bg-slate-850 p-0.5 rounded-lg border border-white/5 max-w-[160px]">
+                      <button
+                        type="button"
+                        onClick={() => setSimShippingFree(true)}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${simShippingFree ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        Grátis
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSimShippingFree(false)}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${!simShippingFree ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        Cobrar
+                      </button>
+                    </div>
+                  </div>
+
+                  {!simShippingFree && (
+                    <div className="space-y-1 animate-in slide-in-from-top-1 duration-150">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">Valor do Frete (R$)</label>
+                      <input
+                        type="number"
+                        value={simShippingFee}
+                        onChange={(e) => setSimShippingFee(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-bold text-white outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Assembly Control */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Montagem de Móveis</span>
+                    <div className="flex bg-slate-850 p-0.5 rounded-lg border border-white/5 max-w-[160px]">
+                      <button
+                        type="button"
+                        onClick={() => setSimAssemblyFree(true)}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${simAssemblyFree ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        Grátis
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSimAssemblyFree(false)}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${!simAssemblyFree ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        Cobrar
+                      </button>
+                    </div>
+                  </div>
+
+                  {!simAssemblyFree && (
+                    <div className="space-y-1 animate-in slide-in-from-top-1 duration-150">
+                      <label className="text-[9px] font-black text-slate-400 uppercase">Valor de Montagem (R$)</label>
+                      <input
+                        type="number"
+                        value={simAssemblyFee}
+                        onChange={(e) => setSimAssemblyFee(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-bold text-white outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Validity days select */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Validade do Orçamento</label>
+                  <select
+                    value={simValidityDays}
+                    onChange={(e) => setSimValidityDays(Number(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none text-white text-xs font-bold focus:border-purple-500"
+                  >
+                    <option value={1} className="bg-slate-900">1 dia útil (Apenas hoje)</option>
+                    <option value={3} className="bg-slate-900">3 dias corridos</option>
+                    <option value={5} className="bg-slate-900">5 dias corridos (Recomendado)</option>
+                    <option value={7} className="bg-slate-900">7 dias corridos</option>
+                    <option value={10} className="bg-slate-900">10 dias corridos</option>
+                    <option value={15} className="bg-slate-900">15 dias corridos</option>
+                    <option value={30} className="bg-slate-900">30 dias corridos</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column (Dynamic Proposal Simulation) */}
+            <div className="lg:col-span-6 flex justify-center">
+              <div className="w-full max-w-sm bg-white text-slate-900 rounded-[2.5rem] p-6 shadow-2xl space-y-5 border border-purple-100 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full filter blur-2xl pointer-events-none" />
+                
+                <div className="space-y-4">
+                  {/* Corporate header mockup */}
+                  <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center">
+                        <ShieldCheck size={14} className="text-white" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-tight text-gray-800">Sono Show Móveis</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[7px] font-mono text-gray-400 block">PROPOSTA SIMULADA</span>
+                      <span className="text-[9px] font-black text-purple-600 uppercase">Validade: {simValidityDays} {simValidityDays === 1 ? 'dia' : 'dias'}</span>
+                    </div>
+                  </div>
+
+                  {/* Client and Product Details */}
+                  <div className="space-y-3">
+                    <div className="bg-purple-50/50 p-2.5 rounded-lg text-[9px] font-bold text-purple-700 uppercase">
+                      Cliente: Consumidor Demonstrativo
+                    </div>
+                    
+                    <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+                      <img 
+                        src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=150&h=150&q=80" 
+                        alt="Sofa Reclinável Premium" 
+                        className="w-12 h-12 object-cover rounded-xl border border-purple-100 shadow-sm flex-shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[8px] font-black text-purple-600 block uppercase tracking-wider">Estofados Selecionados</span>
+                        <h4 className="text-[11px] font-bold text-gray-800 truncate">Sofa Reclinável Premium</h4>
+                        <span className="text-[11px] font-black text-gray-900 block mt-0.5">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(simProductValue)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conditions Lines */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-400 uppercase">Frete:</span>
+                      <span className={simShippingFree ? 'text-green-600' : 'text-gray-700'}>
+                        {simShippingFree ? 'GRÁTIS' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(simShippingFee)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-400 uppercase">Montagem:</span>
+                      <span className={simAssemblyFree ? 'text-green-600' : 'text-gray-700'}>
+                        {simAssemblyFree ? 'GRÁTIS' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(simAssemblyFee)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Total line */}
+                  <div className="bg-purple-50 p-3.5 rounded-2xl flex justify-between items-center border border-purple-100">
+                    <div>
+                      <span className="text-[8px] font-black text-purple-700 uppercase block tracking-wider">Valor Total</span>
+                      <span className="text-xs font-medium text-purple-500">Logística inclusa</span>
+                    </div>
+                    <span className="text-xl font-black text-purple-900 tracking-tight">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(calculatedTotal())}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('login');
+                    setViewMode('app');
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  Criar um Orçamento Real
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* PLANS SECTION */}
+        <section id="planos" className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 relative">
+          <div className="text-center max-w-2xl mx-auto space-y-4 mb-16">
+            <span className="text-purple-400 text-[10px] font-black uppercase tracking-[0.3em]">Ambientes Prontos</span>
+            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tight">
+              A escala perfeita para <span className="text-purple-400">seu negócio</span>
+            </h2>
+            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Planos sob medida com ambientes de dados 100% isolados</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.map((p) => (
+              <div 
+                key={p.id}
+                className={`bg-white/5 border border-white/5 p-6 rounded-3xl flex flex-col justify-between hover:border-purple-500/20 transition-all duration-300 relative ${p.id === 'pequeno' ? 'ring-2 ring-purple-600 shadow-xl shadow-purple-600/5' : ''}`}
+              >
+                {p.id === 'pequeno' && (
+                  <span className="absolute -top-3 right-6 bg-purple-600 text-white font-black text-[8px] uppercase tracking-wider px-3 py-1 rounded-full shadow-lg">Mais Escolhido</span>
+                )}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-black text-sm text-slate-300 uppercase tracking-tight">{p.name}</h3>
+                    <div className="flex items-baseline gap-1 mt-2">
+                      <span className="text-3xl font-black text-white tracking-tight">{p.price}</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{p.period}</span>
+                    </div>
+                  </div>
+                  <hr className="border-white/5" />
+                  <ul className="space-y-3">
+                    {p.features.map((f, idx) => (
+                      <li key={idx} className="flex gap-2 items-start text-xs text-slate-300">
+                        <Check size={14} className="text-green-500 shrink-0 mt-0.5" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedPlan(p.id);
+                    setActiveTab('register');
+                    setRegStep(1);
+                    setViewMode('app');
+                  }}
+                  className={`w-full font-black text-[10px] uppercase tracking-wider py-3.5 rounded-xl mt-8 transition-all active:scale-95 cursor-pointer ${
+                    p.id === 'pequeno'
+                      ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-600/10'
+                      : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  Cadastrar Empresa
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 text-center space-y-4">
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em]">
+            Conquista App SaaS - Todos os direitos reservados
+          </p>
+          <p className="text-slate-600 text-[9px] font-medium max-w-md mx-auto">
+            Plataforma de alta performance para inteligência de vendas, gestão de metas progressivas, e orçamentos corporativos integrados.
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
       <motion.div 
@@ -444,6 +953,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           {/* Right panel (Tabs: Login or SaaS Registration Wizard) */}
           <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-between">
+            
+            {/* Back to Landing Page option */}
+            <div className="flex justify-start mb-6">
+              <button
+                type="button"
+                onClick={() => setViewMode('landing')}
+                className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100/85 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <ChevronLeft size={12} strokeWidth={3} />
+                Voltar para apresentação
+              </button>
+            </div>
             
             {/* Header Tabs */}
             <div className="flex bg-gray-100 p-1.5 rounded-2xl gap-1 mb-8 max-w-sm">
@@ -706,7 +1227,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       <p className="text-gray-400 font-bold uppercase text-[8px] tracking-widest mt-1.5">Escolha a escala ideal para o seu negócio</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {plans.map((p) => (
                         <div 
                           key={p.id}
@@ -796,7 +1317,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                           <div className="text-center">
                             <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Valor do Plano Selecionado</p>
                             <span className="text-lg font-black text-purple-700">
-                              {selectedPlan === 'pequeno' ? 'R$ 49,00' : selectedPlan === 'medio' ? 'R$ 199,00' : 'R$ 499,00'}
+                              {selectedPlan === 'solo' ? 'R$ 10,00' : selectedPlan === 'pequeno' ? 'R$ 49,90' : selectedPlan === 'medio' ? 'R$ 199,00' : 'R$ 499,00'}
                             </span>
                           </div>
                         </div>

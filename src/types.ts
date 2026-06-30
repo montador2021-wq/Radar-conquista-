@@ -12,7 +12,7 @@ export interface User {
   accessToken?: string;
   tenantId?: string;
   tenantName?: string;
-  plan?: 'pequeno' | 'medio' | 'empresarial';
+  plan?: 'solo' | 'pequeno' | 'medio' | 'empresarial';
   createdAt?: string;
   expirationDate?: string;
 }

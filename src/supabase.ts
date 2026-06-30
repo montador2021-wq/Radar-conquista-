@@ -158,90 +158,90 @@ class FirestoreQueryBuilder {
     return this;
   }
 
-  async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
-    try {
-      let res: any;
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
-      const currentUser = stored ? JSON.parse(stored) : null;
+  then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
+    const execute = async () => {
+      try {
+        let res: any;
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('currentUser') : null;
+        const currentUser = stored ? JSON.parse(stored) : null;
 
-      if (this.insertData) {
-        for (const item of this.insertData) {
-          const id = item.id || item.uuid || doc(collection(db, this.colName)).id;
+        if (this.insertData) {
+          for (const item of this.insertData) {
+            const id = item.id || item.uuid || doc(collection(db, this.colName)).id;
+            const cleanItem = { ...item };
+            if (!cleanItem.id) cleanItem.id = id;
+            if (currentUser && currentUser.tenantId && !cleanItem.tenantId && this.colName !== 'tenants') {
+              cleanItem.tenantId = currentUser.tenantId;
+            }
+            await setDoc(doc(db, this.colName, id), cleanItem);
+          }
+          res = { data: this.insertData, error: null };
+        }
+        else if (this.upsertData) {
+          const item = Array.isArray(this.upsertData) ? this.upsertData[0] : this.upsertData;
+          const id = item.id;
+          if (!id) {
+            throw new Error("Upsert operation requires an 'id' field");
+          }
           const cleanItem = { ...item };
-          if (!cleanItem.id) cleanItem.id = id;
           if (currentUser && currentUser.tenantId && !cleanItem.tenantId && this.colName !== 'tenants') {
             cleanItem.tenantId = currentUser.tenantId;
           }
-          await setDoc(doc(db, this.colName, id), cleanItem);
+          await setDoc(doc(db, this.colName, id), cleanItem, { merge: true });
+          res = { data: cleanItem, error: null };
         }
-        res = { data: this.insertData, error: null };
-      }
-      else if (this.upsertData) {
-        const item = Array.isArray(this.upsertData) ? this.upsertData[0] : this.upsertData;
-        const id = item.id;
-        if (!id) {
-          throw new Error("Upsert operation requires an 'id' field");
-        }
-        const cleanItem = { ...item };
-        if (currentUser && currentUser.tenantId && !cleanItem.tenantId && this.colName !== 'tenants') {
-          cleanItem.tenantId = currentUser.tenantId;
-        }
-        await setDoc(doc(db, this.colName, id), cleanItem, { merge: true });
-        res = { data: cleanItem, error: null };
-      }
-      else if (this.updateData) {
-        const docsToUpdate = await this.executeGet();
-        for (const d of docsToUpdate) {
-          await updateDoc(doc(db, this.colName, d.id), this.updateData);
-        }
-        res = { data: docsToUpdate, error: null };
-      }
-      else if (this.isDelete) {
-        const docsToDelete = await this.executeGet();
-        for (const d of docsToDelete) {
-          await deleteDoc(doc(db, this.colName, d.id));
-        }
-        res = { data: docsToDelete, error: null };
-      }
-      else {
-        if (this.countMode) {
-          const docs = await this.executeGet();
-          res = { count: docs.length, data: docs, error: null };
-        } else {
-          const docs = await this.executeGet();
-          let resultData: any = docs;
-
-          if (this.isSingle || this.isMaybeSingle) {
-            resultData = docs.length > 0 ? docs[0] : null;
-            if (this.isSingle && !resultData) {
-              throw { message: "Document not found", code: "PGRST116" };
-            }
+        else if (this.updateData) {
+          const docsToUpdate = await this.executeGet();
+          for (const d of docsToUpdate) {
+            await updateDoc(doc(db, this.colName, d.id), this.updateData);
           }
-          res = { data: resultData, error: null };
+          res = { data: docsToUpdate, error: null };
+        }
+        else if (this.isDelete) {
+          const docsToDelete = await this.executeGet();
+          for (const d of docsToDelete) {
+            await deleteDoc(doc(db, this.colName, d.id));
+          }
+          res = { data: docsToDelete, error: null };
+        }
+        else {
+          if (this.countMode) {
+            const docs = await this.executeGet();
+            res = { count: docs.length, data: docs, error: null };
+          } else {
+            const docs = await this.executeGet();
+            let resultData: any = docs;
+
+            if (this.isSingle || this.isMaybeSingle) {
+              resultData = docs.length > 0 ? docs[0] : null;
+              if (this.isSingle && !resultData) {
+                throw { message: "Document not found", code: "PGRST116" };
+              }
+            }
+            res = { data: resultData, error: null };
+          }
+        }
+
+        return res;
+      } catch (error: any) {
+        console.error(`Error executing Firestore operation on ${this.colName}:`, error);
+        
+        let opType = OperationType.GET;
+        if (this.insertData) opType = OperationType.CREATE;
+        else if (this.upsertData) opType = OperationType.WRITE;
+        else if (this.updateData) opType = OperationType.UPDATE;
+        else if (this.isDelete) opType = OperationType.DELETE;
+        else if (this.countMode) opType = OperationType.LIST;
+
+        try {
+          handleFirestoreError(error, opType, this.colName);
+        } catch (formattedErr: any) {
+          return { data: null, error: formattedErr };
         }
       }
+    };
 
-      return onfulfilled ? onfulfilled(res) : res;
-    } catch (error: any) {
-      console.error(`Error executing Firestore operation on ${this.colName}:`, error);
-      
-      let opType = OperationType.GET;
-      if (this.insertData) opType = OperationType.CREATE;
-      else if (this.upsertData) opType = OperationType.WRITE;
-      else if (this.updateData) opType = OperationType.UPDATE;
-      else if (this.isDelete) opType = OperationType.DELETE;
-      else if (this.countMode) opType = OperationType.LIST;
-
-      try {
-        handleFirestoreError(error, opType, this.colName);
-      } catch (formattedErr: any) {
-        const res = { data: null, error: formattedErr };
-        if (onrejected) {
-          return onrejected(formattedErr);
-        }
-        return onfulfilled ? onfulfilled(res) : res;
-      }
-    }
+    return execute().then(onfulfilled, onrejected);
   }
 
   private async executeGet(): Promise<any[]> {
