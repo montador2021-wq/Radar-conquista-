@@ -89,7 +89,9 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
         accessToken: randomToken,
         tenantId: user?.tenantId || undefined,
         tenantName: user?.tenantName || undefined,
-        plan: user?.plan || undefined
+        plan: user?.plan || undefined,
+        createdAt: new Date().toISOString(),
+        expirationDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
       };
 
       const { error } = await supabase.from('users').insert([newUser]);
@@ -160,6 +162,36 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
         setUsersList(prev => prev.map(u => u.id === targetUser.id ? { ...u, status: newStatus } : u));
       } else {
         alert("Erro ao alterar status do usuário.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateExpiration = async (targetUser: User, days: number | 'vitalicio') => {
+    let newExpirationDate: string | null = null;
+    if (days !== 'vitalicio') {
+      const now = new Date();
+      now.setDate(now.getDate() + days);
+      newExpirationDate = now.toISOString();
+    }
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          expirationDate: newExpirationDate,
+          status: 'ativo'
+        })
+        .eq('id', targetUser.id);
+        
+      if (!error) {
+        setUsersList(prev => prev.map(u => 
+          u.id === targetUser.id 
+            ? { ...u, expirationDate: newExpirationDate || undefined, status: 'ativo' } 
+            : u
+        ));
+      } else {
+        alert("Erro ao atualizar vencimento do usuário.");
       }
     } catch (err) {
       console.error(err);
@@ -517,6 +549,30 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
                         </span>
                       </div>
                       <span className="text-[10px] text-gray-400 font-semibold block">{usr.email || 'Usuário Local'}</span>
+                      {usr.role !== 'admin' && (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Acesso:</span>
+                          {usr.expirationDate ? (
+                            (() => {
+                              const expDate = new Date(usr.expirationDate);
+                              const isExpired = expDate.getTime() < Date.now();
+                              return (
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                                  isExpired 
+                                    ? 'bg-red-50 text-red-600 border-red-100' 
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                }`}>
+                                  {isExpired ? 'Expirado' : 'Ativo'} até {expDate.toLocaleDateString('pt-BR')}
+                                </span>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded">
+                              Vitalício / Sem Expiração
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -539,6 +595,31 @@ const Settings: React.FC<SettingsProps> = ({ targets, onSave, onClose, showInsta
                         </>
                       )}
                     </button>
+
+                    {/* Expiration renew select (only for non-admin) */}
+                    {usr.role !== 'admin' && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <select
+                          value={usr.expirationDate ? "custom" : "vitalicio"}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'vitalicio') {
+                              handleUpdateExpiration(usr, 'vitalicio');
+                            } else {
+                              handleUpdateExpiration(usr, parseInt(val, 10));
+                            }
+                          }}
+                          className="bg-white border border-gray-200 text-gray-700 py-2.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider outline-none focus:border-purple-500 shadow-sm cursor-pointer"
+                        >
+                          <option value="custom" disabled>Prazo de Acesso</option>
+                          <option value="15">+15 Dias (Teste)</option>
+                          <option value="30">+30 Dias (Mensal)</option>
+                          <option value="60">+60 Dias (Bimestral)</option>
+                          <option value="365">+1 Ano (Anual)</option>
+                          <option value="vitalicio">Vitalício (Sem limite)</option>
+                        </select>
+                      </div>
+                    )}
 
                     {/* Block toggle */}
                     <button

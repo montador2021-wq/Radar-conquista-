@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, X, Terminal, CheckSquare, Square, Percent, User } from 'lucide-react';
+import { Save, X, Terminal, CheckSquare, Square, Percent, User, Search, ShoppingBag, Sparkles, Trash2, Check } from 'lucide-react';
 import { Sale, Customer, Targets } from '../tipos';
 
 interface SaleFormProps {
@@ -15,6 +15,49 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
   const [pedido, setPedido] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [produto, setProduto] = useState<number>(0);
+  
+  // States para os dados do produto preenchidos automaticamente ou manualmente
+  const [produtoNome, setProdutoNome] = useState('');
+  const [produtoCodigo, setProdutoCodigo] = useState('');
+  const [produtoCategoria, setProdutoCategoria] = useState('');
+  const [produtoImagem, setProdutoImagem] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+
+  const updateFormWithProducts = (productsList: any[]) => {
+    const totalValue = productsList.reduce((sum, p) => sum + (p.price || 0), 0);
+    const names = productsList.map(p => p.name).join(', ');
+    
+    setProduto(totalValue);
+    setProdutoNome(names);
+    setProdutoCodigo(productsList[0]?.code || '');
+    setProdutoCategoria(productsList[0]?.category || '');
+    setProdutoImagem(productsList[0]?.image || '');
+  };
+
+  const handleProductPriceInputChange = (index: number, valueStr: string) => {
+    const rawDigits = valueStr.replace(/\D/g, '');
+    const numericValue = Number(rawDigits) / 100;
+    
+    const updated = selectedProducts.map((p, idx) => {
+      if (idx === index) {
+        return { ...p, price: numericValue };
+      }
+      return p;
+    });
+    setSelectedProducts(updated);
+    updateFormWithProducts(updated);
+  };
+
+  const removeProduct = (index: number) => {
+    const updated = selectedProducts.filter((_, idx) => idx !== index);
+    setSelectedProducts(updated);
+    updateFormWithProducts(updated);
+  };
   const [assistencia, setAssistencia] = useState<number>(0);
   const [impermeabilizacao, setImpermeabilizacao] = useState<number>(0);
   const [total, setTotal] = useState(0);
@@ -46,6 +89,23 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
       firstInputRef.current.focus();
     }
   }, []);
+
+  const handleSearchCatalog = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/products/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar no catálogo:", err);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const isBonusPorPedidoAtivo = targets.bonusPorPedido?.ativo ?? false;
   const valorBonusPorPedido = targets.bonusPorPedido?.valor ?? 5;
@@ -121,6 +181,17 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
               return;
             }
             setErrorMsg('');
+
+            const finalProducts = selectedProducts.length > 0 ? selectedProducts : (produtoNome ? [{
+              name: produtoNome,
+              code: produtoCodigo || '',
+              price: produto,
+              originalPrice: produto,
+              image: produtoImagem || '',
+              category: produtoCategoria || '',
+              nickname: produtoNome.split(' - ')[0] || ''
+            }] : []);
+
             onSubmit({ 
               pedido, 
               clienteId,
@@ -131,7 +202,13 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
               comissaoProduto: comissaoProdutoBase,
               bonusTotal: calculateBonusFixo() + comissaoProdutoBase + comissaoAssistenciaBase,
               servicosExtras: getSelectedLabels(),
-              customDate: dataPedido
+              customDate: dataPedido,
+              produtoCodigo: produtoCodigo || undefined,
+              produtoNome: produtoNome || undefined,
+              produtoImagem: produtoImagem || undefined,
+              produtoNickname: produtoNome ? produtoNome.split(' - ')[0] : undefined,
+              produtoCategoria: produtoCategoria || undefined,
+              products: finalProducts
             });
           }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -179,27 +256,284 @@ const SaleForm: React.FC<SaleFormProps> = ({ onCancel, onSubmit, customers, targ
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center px-1">
-                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Valor Produto</label>
-                   {produto > 0 && (
-                     <div className="flex items-center gap-1.5 text-purple-600 font-black text-[10px] animate-in slide-in-from-right-2">
-                        <Percent size={10} /> + {formatCurrency(comissaoProdutoBase)} ({comissaoP}%)
-                     </div>
-                   )}
+            {/* BUSCAR PRODUTO NO CATÁLOGO (SONO SHOW MÓVEIS) */}
+            <div className="bg-purple-50/50 border border-purple-100 rounded-3xl p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                    <ShoppingBag size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase text-purple-900 tracking-wider">Busca de Produto</h3>
+                    <p className="text-[9px] text-purple-600/70 font-semibold uppercase tracking-widest">Pesquise produtos na API de catálogo para preenchimento automático</p>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={produto === 0 ? "" : formatCurrency(produto)}
-                  onChange={(e) => {
-                    handleInputChange(setProduto, e.target.value);
-                    if (errorMsg) setErrorMsg('');
-                  }}
-                  placeholder="R$ 0,00"
-                  className="w-full bg-gray-50 border border-gray-200 p-5 rounded-2xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-gray-800 font-bold text-lg outline-none"
-                />
+                {selectedProducts.length > 0 && (
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md font-bold uppercase tracking-wider flex items-center gap-1 animate-in zoom-in-95">
+                    <Check size={10} /> {selectedProducts.length} Vinculado{selectedProducts.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Pesquisar produto no catálogo... (ex: Sofá, Guarda-Roupa)"
+                        className="w-full bg-white border border-gray-200 p-4 pl-12 rounded-xl text-sm font-semibold outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-gray-800"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearchCatalog();
+                          }
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSearchCatalog()}
+                      disabled={searching}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 rounded-xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                    >
+                      {searching ? 'Buscando...' : 'Buscar'}
+                    </button>
+                  </div>
+
+                  {/* LISTA DROPDOWN FLUTUANTE ABAIXO DO INPUT */}
+                  {searchResults.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-80 overflow-y-auto z-50 p-2 space-y-1">
+                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 mb-1">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Produtos Encontrados ({searchResults.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setSearchResults([])}
+                          className="text-[9px] font-bold text-purple-600 hover:text-purple-700 uppercase"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                      {searchResults.map((item) => (
+                        <div
+                          key={item.code}
+                          className="hover:bg-purple-50/50 rounded-xl p-2.5 flex gap-3 transition-all cursor-pointer group"
+                          onClick={() => {
+                            const newProduct = {
+                              name: item.name || '',
+                              code: item.code || item.sku || '',
+                              price: item.price || 0,
+                              originalPrice: item.price || 0,
+                              image: item.image || '',
+                              category: item.category || '',
+                              nickname: item.nickname || ''
+                            };
+                            const updated = [...selectedProducts, newProduct];
+                            setSelectedProducts(updated);
+                            updateFormWithProducts(updated);
+                            setSearchResults([]);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <img
+                            src={item.image || 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600'}
+                            alt={item.name}
+                            referrerPolicy="no-referrer"
+                            className="w-12 h-12 object-cover rounded-lg bg-gray-50 flex-shrink-0 border border-gray-100"
+                          />
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[8px] font-black text-purple-600 uppercase tracking-wider truncate">{item.category}</span>
+                              <span className="text-[9px] font-mono text-gray-400">Cód: {item.code}</span>
+                            </div>
+                            <h4 className="text-[11px] font-bold text-gray-800 line-clamp-1 leading-tight group-hover:text-purple-700">{item.name}</h4>
+                            <div className="text-xs font-black text-gray-900 mt-0.5">{formatCurrency(item.price)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* LISTA DE PRODUTOS SELECIONADOS NO PEDIDO */}
+                  {selectedProducts.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest leading-none">
+                        Produtos Selecionados ({selectedProducts.length})
+                      </div>
+                      
+                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                        {selectedProducts.map((product, idx) => (
+                          <div 
+                            key={idx} 
+                            className="bg-white border border-purple-100 rounded-xl p-3 flex flex-col gap-2 relative animate-in zoom-in-95 duration-200"
+                          >
+                            <div className="flex items-start gap-3">
+                              <img 
+                                src={product.image || 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600'} 
+                                alt={product.name} 
+                                className="w-10 h-10 object-cover rounded-lg bg-white border border-purple-100 flex-shrink-0"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[8px] font-black text-purple-600 uppercase tracking-widest leading-none">Produto #{idx + 1}</div>
+                                <div className="text-[11px] font-extrabold text-gray-800 truncate mt-0.5" title={product.name}>
+                                  {product.name}
+                                </div>
+                                {product.code && (
+                                  <div className="text-[8px] text-gray-400 font-mono">SKU: {product.code}</div>
+                                )}
+                                <div className="text-[9px] text-gray-500 font-medium">
+                                  Preço Catálogo: {formatCurrency(product.originalPrice || 0)}
+                                </div>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => removeProduct(idx)} 
+                                className="text-rose-500 hover:text-rose-700 p-1 hover:bg-rose-50 rounded-lg transition-all"
+                                title="Remover Produto"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+
+                            {/* Preço de venda editável */}
+                            <div className="flex items-center justify-between pt-2 border-t border-purple-100/30">
+                              <span className="text-[9px] font-bold text-gray-500 uppercase">Preço Venda (Negociado):</span>
+                              <div className="relative max-w-[120px]">
+                                <input 
+                                  type="text" 
+                                  value={formatCurrency(product.price || 0)}
+                                  onChange={(e) => handleProductPriceInputChange(idx, e.target.value)}
+                                  className="w-full bg-white border border-gray-300 focus:border-purple-500 text-right px-2 py-1 rounded-lg text-[11px] font-extrabold text-gray-800 outline-none transition-all shadow-sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* FORMULÁRIO DE DADOS DO PRODUTO (NOME, CÓDIGO, CATEGORIA, PREÇO UNITÁRIO, IMAGEM) */}
+            <div className="bg-gray-50/70 border border-gray-200/80 rounded-3xl p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase text-gray-800 tracking-wider">Dados do Produto</h3>
+                    <p className="text-[9px] text-gray-500/70 font-semibold uppercase tracking-widest">Informações detalhadas do produto selecionado ou preenchidas manualmente</p>
+                  </div>
+                </div>
+                {(produtoNome || produtoCodigo || selectedProducts.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setSelectedProducts([]);
+                      setProdutoNome('');
+                      setProdutoCodigo('');
+                      setProdutoCategoria('');
+                      setProdutoImagem('');
+                      setProduto(0);
+                      setSearchQuery('');
+                    }}
+                    className="text-[9px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider flex items-center gap-1"
+                    title="Limpar formulário do produto"
+                  >
+                    <Trash2 size={12} /> Limpar
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Nome do Produto</label>
+                  <input
+                    type="text"
+                    value={produtoNome}
+                    onChange={(e) => setProdutoNome(e.target.value)}
+                    placeholder="Ex: Guarda-Roupa Blumenau com Espelho 3 Portas nature"
+                    className="w-full bg-white border border-gray-200 p-4 rounded-xl text-sm font-semibold outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-gray-800 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Código do Produto</label>
+                  <input
+                    type="text"
+                    value={produtoCodigo}
+                    onChange={(e) => setProdutoCodigo(e.target.value)}
+                    placeholder="Ex: G-BLU-01"
+                    className="w-full bg-white border border-gray-200 p-4 rounded-xl text-sm font-semibold outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-gray-800 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Categoria</label>
+                  <input
+                    type="text"
+                    value={produtoCategoria}
+                    onChange={(e) => setProdutoCategoria(e.target.value)}
+                    placeholder="Ex: Dormitório"
+                    className="w-full bg-white border border-gray-200 p-4 rounded-xl text-sm font-semibold outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-gray-800 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Preço Unitário (Valor do Produto)</label>
+                    {produto > 0 && (
+                      <div className="flex items-center gap-1 text-purple-600 font-black text-[9px] animate-in slide-in-from-right-2">
+                        +{formatCurrency(comissaoProdutoBase)} ({comissaoP}%)
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={produto === 0 ? "" : formatCurrency(produto)}
+                    onChange={(e) => {
+                      handleInputChange(setProduto, e.target.value);
+                      if (errorMsg) setErrorMsg('');
+                    }}
+                    placeholder="R$ 0,00"
+                    className="w-full bg-white border border-gray-200 p-4 rounded-xl text-sm font-bold text-gray-800 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Imagem do Produto (URL)</label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={produtoImagem}
+                      onChange={(e) => setProdutoImagem(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full bg-white border border-gray-200 p-4 rounded-xl text-xs font-semibold outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-gray-800"
+                    />
+                    {produtoImagem && (
+                      <div className="w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0 flex items-center justify-center shadow-sm">
+                        <img
+                          src={produtoImagem}
+                          alt="Preview"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=100';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

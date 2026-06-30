@@ -16,6 +16,24 @@ export interface Sale {
   comissaoProduto: number; // Base 2.2%
   servicosExtras: string[]; // Lista de nomes dos bônus fixos (ex: ["Montagem", "Lavagem"])
   status?: 'ativo' | 'cancelado';
+  produtoCodigo?: string;
+  produtoNome?: string;
+  produtoImagem?: string;
+  produtoNickname?: string;
+  produtoCategoria?: string;
+  empresaId?: string;
+  lojaId?: string;
+  usuarioId?: string;
+  createdAt?: string | number;
+  products?: Array<{
+    name: string;
+    code: string;
+    price: number;
+    originalPrice?: number;
+    image?: string;
+    category?: string;
+    nickname?: string;
+  }>;
 }
 
 /**
@@ -158,4 +176,21 @@ export interface Opportunity {
   phone?: string;
   returnDate?: string;
   productInterest?: string;
+  productImage?: string;
+  productCode?: string;
+  productCategory?: string;
+  productNickname?: string;
+  shippingFee?: number;
+  assemblyFee?: number;
+  isAssemblyFree?: boolean;
+  validityDays?: number;
+  products?: Array<{
+    name: string;
+    code: string;
+    price: number;
+    originalPrice?: number;
+    image?: string;
+    category?: string;
+    nickname?: string;
+  }>;
 }

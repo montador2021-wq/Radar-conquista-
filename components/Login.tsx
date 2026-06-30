@@ -168,7 +168,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           status: 'ativo',
           lastLogin: new Date().toISOString(),
           photoUrl: "https://picsum.photos/seed/" + customId + "/100/100",
-          accessToken: randomToken
+          accessToken: randomToken,
+          createdAt: new Date().toISOString(),
+          expirationDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
         };
 
         const { error: insertError } = await supabase.from('users').insert([newUser]);
@@ -251,7 +253,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           status: 'ativo',
           photoUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${customId}/100/100`,
           lastLogin: new Date().toISOString(),
-          accessToken: randomToken
+          accessToken: randomToken,
+          createdAt: new Date().toISOString(),
+          expirationDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
         };
 
         const { error: insertError } = await supabase.from('users').insert([newUser]);
@@ -318,7 +322,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         accessToken: randomToken,
         tenantId,
         tenantName: companyName.trim(),
-        plan: selectedPlan
+        plan: selectedPlan,
+        createdAt: new Date().toISOString(),
+        expirationDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
       };
 
       const { error: userError } = await supabase.from('users').insert([newSupervisor]);

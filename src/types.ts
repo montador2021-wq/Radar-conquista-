@@ -13,6 +13,8 @@ export interface User {
   tenantId?: string;
   tenantName?: string;
   plan?: 'pequeno' | 'medio' | 'empresarial';
+  createdAt?: string;
+  expirationDate?: string;
 }
 
 export interface AccessLog {

@@ -41,8 +41,18 @@ import {
   DollarSign,
   Calendar,
   Edit2,
-  Search
+  Search,
+  FileText,
+  Send,
+  RefreshCw
 } from 'lucide-react';
+
+import { 
+  buildImmediateWhatsAppMessage, 
+  buildFollowUpWhatsAppMessage, 
+  generateProfessionalQuotePDF, 
+  mapOpportunityToQuote 
+} from './radarconquista-utils';
 
 import { 
   BarChart as RechartsBarChart, 
@@ -58,6 +68,37 @@ import {
 } from 'recharts';
 
 const STORAGE_KEY = 'conquista_app_data_v1';
+
+const isUserBlocked = (usr: User | null | undefined): boolean => {
+  if (!usr) return false;
+  if (usr.role === 'admin' || usr.email?.toLowerCase() === 'prvalmirdej@gmail.com' || usr.email?.toLowerCase() === 'valmirmelo@gmail.com') {
+    return false;
+  }
+  if (usr.status === 'bloqueado') {
+    return true;
+  }
+  if (usr.expirationDate) {
+    const expDate = new Date(usr.expirationDate);
+    if (!isNaN(expDate.getTime())) {
+      return expDate.getTime() < Date.now();
+    }
+  }
+  return false;
+};
+
+const isUserExpired = (usr: User | null | undefined): boolean => {
+  if (!usr) return false;
+  if (usr.role === 'admin' || usr.email?.toLowerCase() === 'prvalmirdej@gmail.com' || usr.email?.toLowerCase() === 'valmirmelo@gmail.com') {
+    return false;
+  }
+  if (usr.expirationDate) {
+    const expDate = new Date(usr.expirationDate);
+    if (!isNaN(expDate.getTime())) {
+      return expDate.getTime() < Date.now();
+    }
+  }
+  return false;
+};
 const TARGETS_KEY = 'conquista_app_targets_v1';
 const CUSTOMERS_KEY = 'conquista_app_customers_v1';
 const OPPORTUNITIES_KEY = 'conquista_app_opportunities_v1';
@@ -282,7 +323,7 @@ const App: React.FC = () => {
           }
           
           if (matchedUser) {
-            if (matchedUser.status === 'bloqueado') {
+            if (isUserBlocked(matchedUser)) {
               setUser(matchedUser);
               localStorage.setItem('currentUser', JSON.stringify(matchedUser));
             } else {
@@ -321,7 +362,7 @@ const App: React.FC = () => {
             if (latestUser) {
               setUser(latestUser);
               localStorage.setItem('currentUser', JSON.stringify(latestUser));
-              if (latestUser.status !== 'bloqueado') {
+              if (!isUserBlocked(latestUser)) {
                 logAccess(latestUser);
               }
             } else {
@@ -433,12 +474,12 @@ const App: React.FC = () => {
 
       try {
         // Metas agora podem ser individuais ou globais. Vamos tentar buscar por vendedorId primeiro.
-        let targetsQuery = supabase.from('settings').select('*').eq('id', `targets_${user.id}`).single();
+        let targetsQuery = supabase.from('settings').select('*').eq('id', `targets_${user.id}`).maybeSingle();
         let { data: targetsData } = await targetsQuery;
 
         if (!targetsData) {
           // Se não tiver individual, tenta a global
-          const { data: globalTargets } = await supabase.from('settings').select('*').eq('id', 'targets').single();
+          const { data: globalTargets } = await supabase.from('settings').select('*').eq('id', 'targets').maybeSingle();
           targetsData = globalTargets;
         }
 
@@ -455,6 +496,9 @@ const App: React.FC = () => {
           };
           setTargets(mergedTargets);
           localStorage.setItem(TARGETS_KEY, JSON.stringify(mergedTargets));
+        } else {
+          setTargets(DEFAULT_TARGETS);
+          localStorage.setItem(TARGETS_KEY, JSON.stringify(DEFAULT_TARGETS));
         }
       } catch (err) {
         console.warn("Erro ao buscar metas:", err);
@@ -718,7 +762,16 @@ const App: React.FC = () => {
       servicosExtras: newSaleData.servicosExtras,
       data: dataFormatada,
       timestamp: saleTimestamp,
-      status: 'ativo'
+      status: 'ativo',
+      produtoCodigo: newSaleData.produtoCodigo,
+      produtoNome: newSaleData.produtoNome,
+      produtoImagem: newSaleData.produtoImagem,
+      produtoNickname: newSaleData.produtoNickname,
+      produtoCategoria: newSaleData.produtoCategoria,
+      empresaId: user?.tenantId || 'unknown',
+      lojaId: user?.store || 'unknown',
+      usuarioId: user?.id || 'unknown',
+      createdAt: new Date().toISOString()
     };
 
     // 1. Salvar localmente IMEDIATAMENTE
@@ -1255,7 +1308,32 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <h4 className="font-bold text-gray-800 mb-1 group-hover:text-purple-600 transition-colors">{opp.title}</h4>
-                      <p className="text-[10px] text-gray-500 mb-2 font-bold">{opp.productInterest}</p>
+                      <p className="text-[10px] text-gray-500 mb-2 font-bold line-clamp-2" title={opp.productInterest}>{opp.productInterest}</p>
+                      
+                      {/* Galeria de Thumbnails para Produtos */}
+                      {opp.products && opp.products.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mb-2.5">
+                          {opp.products.map((p, pIdx) => (
+                            <div key={pIdx} className="relative group/thumb" title={`${p.name} - ${formatBRL(p.price)}`}>
+                              <img 
+                                src={p.image || 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600'} 
+                                className="w-8 h-8 rounded border border-gray-200 object-cover bg-white shadow-sm" 
+                                alt={p.name}
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : opp.productImage ? (
+                        <div className="mb-2.5">
+                          <img 
+                            src={opp.productImage} 
+                            className="w-8 h-8 rounded border border-gray-200 object-cover bg-white shadow-sm" 
+                            alt={opp.productInterest}
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      ) : null}
                       
                       {isGolden && (
                         <div className="mb-2">
@@ -1274,17 +1352,75 @@ const App: React.FC = () => {
                       </div>
 
                       {opp.phone && (
-                        <div className="flex items-center justify-between mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                          <span className="text-[10px] font-bold text-gray-600">{opp.phone}</span>
-                          <a 
-                            href={`https://wa.me/55${opp.phone.replace(/\D/g, '')}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-emerald-500 hover:text-emerald-700 transition-colors"
-                          >
-                            <MessageCircle size={16} />
-                          </a>
+                        <div className="flex flex-col gap-2 mt-3 bg-purple-50/20 p-2.5 rounded-xl border border-purple-100/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black text-purple-600/70 uppercase tracking-widest">Ações do Orçamento</span>
+                            <span className="text-[9px] font-bold text-gray-500 font-mono">{opp.phone}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5 mt-1">
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const quote = mapOpportunityToQuote(opp);
+                                  const sellerName = user ? `${user.firstName} ${user.lastName}` : 'Consultor';
+                                  const branchName = user?.store || 'Sono Show Móveis';
+                                  await generateProfessionalQuotePDF({
+                                    quote,
+                                    branchName,
+                                    sellerName
+                                  });
+                                } catch (err) {
+                                  console.error("Erro ao gerar ou baixar o PDF do orçamento:", err);
+                                }
+                              }}
+                              className="bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 py-1.5 px-1 rounded-lg text-[9px] font-black uppercase tracking-tighter flex flex-col items-center justify-center gap-0.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                              title="Baixar PDF do Orçamento"
+                            >
+                              <FileText size={12} className="text-purple-600" />
+                              <span>PDF</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const quote = mapOpportunityToQuote(opp);
+                                const sellerName = user ? `${user.firstName} ${user.lastName}` : 'Consultor';
+                                const branchName = user?.store || 'Sono Show Móveis';
+                                const url = buildImmediateWhatsAppMessage({
+                                  quote,
+                                  sellerName,
+                                  branchName,
+                                  includePdfNotice: true
+                                });
+                                window.open(url, '_blank');
+                              }}
+                              className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-800 py-1.5 px-1 rounded-lg text-[9px] font-black uppercase tracking-tighter flex flex-col items-center justify-center gap-0.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                              title="Enviar proposta via WhatsApp"
+                            >
+                              <Send size={12} className="text-emerald-600" />
+                              <span>Enviar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const quote = mapOpportunityToQuote(opp);
+                                const sellerName = user ? `${user.firstName} ${user.lastName}` : 'Consultor';
+                                const url = buildFollowUpWhatsAppMessage({
+                                  quote,
+                                  sellerName
+                                });
+                                window.open(url, '_blank');
+                              }}
+                              className="bg-purple-100 hover:bg-purple-200 text-purple-900 py-1.5 px-1 rounded-lg text-[9px] font-black uppercase tracking-tighter flex flex-col items-center justify-center gap-0.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                              title="Cobrar orçamento / Follow-up"
+                            >
+                              <RefreshCw size={12} className="text-purple-700" />
+                              <span>Cobrar</span>
+                            </button>
+                          </div>
                         </div>
                       )}
                       
@@ -2125,7 +2261,8 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} />;
   }
 
-  if (user && user.status === 'bloqueado') {
+  if (user && isUserBlocked(user)) {
+    const expired = isUserExpired(user);
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-red-100 p-10 space-y-6 animate-in zoom-in-95 duration-300">
@@ -2133,14 +2270,24 @@ const App: React.FC = () => {
             <Lock size={40} />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">Acesso Suspenso</h1>
+            <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">
+              {expired ? 'Período Expirado' : 'Acesso Suspenso'}
+            </h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Radar Conquista - Gestão</p>
           </div>
           <p className="text-sm font-medium text-gray-600 leading-relaxed">
-            Olá, <span className="font-bold text-gray-900">{user.firstName}</span>. Seu acesso ao sistema está temporariamente suspenso devido ao vencimento ou pendência da sua mensalidade.
+            {expired ? (
+              <>
+                Olá, <span className="font-bold text-gray-900">{user.firstName}</span>. Seu período de teste gratuito de 15 dias ou sua assinatura ativa expirou.
+              </>
+            ) : (
+              <>
+                Olá, <span className="font-bold text-gray-900">{user.firstName}</span>. Seu acesso ao sistema está temporariamente suspenso devido ao vencimento ou pendência da sua mensalidade.
+              </>
+            )}
           </p>
           <div className="bg-red-50 p-4 rounded-2xl border border-red-100 text-[10px] font-black uppercase text-red-700 tracking-wider">
-            Entre em contato com o administrador para regularizar seu cadastro.
+            Entre em contato com o administrador para renovar ou regularizar seu acesso.
           </div>
           <button 
             onClick={handleLogout}
